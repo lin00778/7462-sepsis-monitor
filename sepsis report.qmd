@@ -1,0 +1,112 @@
+---
+title: "Sepsis Monitoring Report"
+author: "Jiayu Lin"
+format: html
+editor: visual
+execute: 
+  warning: false
+  message: false
+---
+
+```{r}
+library(tidyverse)
+library(data.table) ## For the fread function
+library(lubridate)
+library(googledrive)
+library(DT)
+source("sepsis_monitor_functions.R")
+```
+
+```{r}
+print("Last updated:")
+Sys.time()
+```
+
+```{r}
+# input the updating dataset
+file_link <- "https://drive.google.com/file/d/1c8AS8bL1nI0-DCFGnA4mPkSXF_zjFlmS"
+sepsis <- drive_read_string(file_link) %>%
+  fread()
+```
+
+
+
+-   Table of current sepsis patients:
+
+```{r}
+sepsis %>%
+  filter(SepsisLabel == 1) %>%
+  select(PatientID, HR, Temp, Resp, obsTime) %>%
+  datatable()
+```
+
+-   A table listing the patients who currently have sepsis (if any), along with their most recent heart rate, temperature, and respiratory rate
+
+```{r}
+table1 <- sepsis %>%
+  filter(SepsisLabel == 1) %>%
+  group_by(PatientID) %>%
+  arrange(desc(obsTime)) %>% 
+  mutate(rank = rank(desc(obsTime)))
+
+table1 %>%
+  filter(rank == 1) %>%
+  select(PatientID, HR, Temp, Resp) %>%
+  datatable()
+```
+
+- Plots for all patients who have sepsis (if any) that show the complete history of their heart rate, temperature, and respiratory rate during their time in the ICU.
+
+```{r}
+ids<- sepsis %>% 
+  filter(SepsisLabel==1) %>%
+  select(PatientID) %>%
+  unlist() %>%
+  unname()
+
+for (i in ids) {
+  
+  id <- getPatient(i)
+  title<-paste("Patient ID:", i)
+  
+  # plot for heart rate
+  print(ggplot(data=id, aes(x=ICULOS, y=HR, group=1)) + geom_line() + geom_point() + ggtitle(title))
+  # plot for temperature
+  print(ggplot(data=id, aes(x=ICULOS, y=Temp, group=1)) + geom_line() + geom_point() + ggtitle(title))
+  # plot for respiratory rate
+  print(ggplot(data=id, aes(x=ICULOS, y=Resp, group=1)) + geom_line() + geom_point() + ggtitle(title))
+}
+```
+
+
+- A table showing the change in heart rate, temperature, and respiratory rate between the last two measurements for all patients
+
+```{r}
+table3 <- sepsis %>%
+  group_by(PatientID) %>%
+  arrange(desc(obsTime)) %>% 
+  mutate(rank = rank(desc(obsTime))) %>%
+  filter(rank %in% c(1,2)) 
+
+table3_final = matrix(NA, length(unique(table3$PatientID)), 4)
+colnames(table3_final) = c("id", "heart rate", "temperature", "respiratory rate")
+
+data1 = table3 %>% filter(rank==1)
+data2 = table3 %>% filter(rank==2)
+
+for (i in 1:length(unique(table3$PatientID))) {
+  
+  mid1 = data1[which(data1$PatientID==unique(table3$PatientID)[i]),]
+  mid2 = data2[which(data2$PatientID==unique(table3$PatientID)[i]),]
+    
+  table3_final[i,1]=unique(table3$PatientID)[i]
+  table3_final[i,2]=mid2$HR - mid1$HR
+  table3_final[i,3]=mid2$Temp - mid1$Temp
+  table3_final[i,4]=mid2$Resp - mid1$Resp
+  
+}
+
+table3_final %>% datatable()
+
+
+```
