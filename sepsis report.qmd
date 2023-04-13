@@ -29,8 +29,6 @@ sepsis <- drive_read_string(file_link) %>%
   fread()
 ```
 
-
-
 -   Table of current sepsis patients:
 
 ```{r}
@@ -55,7 +53,7 @@ table1 %>%
   datatable()
 ```
 
-- Plots for all patients who have sepsis (if any) that show the complete history of their heart rate, temperature, and respiratory rate during their time in the ICU.
+-   Plots for all patients who have sepsis (if any) that show the complete history of their heart rate, temperature, and respiratory rate during their time in the ICU.
 
 ```{r}
 ids<- sepsis %>% 
@@ -78,8 +76,7 @@ for (i in ids) {
 }
 ```
 
-
-- A table showing the change in heart rate, temperature, and respiratory rate between the last two measurements for all patients
+-   A table showing the change in heart rate, temperature, and respiratory rate between the last two measurements for all patients
 
 ```{r}
 table3 <- sepsis %>%
